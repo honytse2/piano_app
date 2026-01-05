@@ -14,33 +14,49 @@
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <style>
-        /* Base Piano Styling */
-        .white-key { width: 48px; height: 200px; transition: transform 0.05s, background-color 0.05s; }
-        .black-key { width: 32px; height: 120px; margin-left: -16px; transition: transform 0.05s; }
-        .key-pressed { transform: translateY(4px) !important; }
-        .piano-container { min-width: 768px; } 
+   <style>
+    /* Base Piano Styling */
+    .white-key { 
+        width: 6.6vw; /* Uses viewport width so all 15 keys fit exactly (100 / 15 = ~6.6) */
+        height: 60vh; 
+        transition: transform 0.05s, background-color 0.05s; 
+    }
+    
+    .black-key { 
+        width: 4.5vw; 
+        height: 35vh; 
+        margin-left: -2.25vw; /* Half of the width to center it */
+        transition: transform 0.05s; 
+    }
 
-        /* Android Specific UI Fixes */
-        body { 
-            overscroll-behavior-y: contain; /* Prevents pull-to-refresh */
-            user-select: none; 
-            -webkit-user-select: none; 
-            -webkit-touch-callout: none;
-            touch-action: manipulation;
-            background-color: #f8fafc;
-        }
+    .key-pressed { transform: translateY(4px) !important; }
 
-        /* Smooth scroll for the piano on small screens */
-        .scroll-container {
-            overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
-            width: 100%;
-            display: flex;
-            justify-content: center;
-            padding: 20px;
-        }
-    </style>
+    /* Container should take full width but no more */
+    .piano-container { 
+        display: flex;
+        width: 100vw; 
+        max-width: 100%;
+        justify-content: center;
+        padding: 0;
+        margin: 0;
+    }
+
+    body { 
+        overscroll-behavior-y: contain;
+        user-select: none; 
+        -webkit-user-select: none; 
+        touch-action: manipulation;
+        overflow: hidden; /* Prevents accidental scrolling */
+        background-color: #1e293b;
+    }
+
+    /* Screen rotation reminder */
+    @media (orientation: portrait) {
+      .rotate-notice {
+        display: flex !important;
+      }
+    }
+</style>
 
     <script>
         // Service Worker Registration for PWA
@@ -187,3 +203,4 @@
     </script>
 </body>
 </html>
+
