@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>Piano Scale Master - Landscape</title>
+    <title>Piano Scale Master - Pro</title>
     
     <link rel="manifest" href="manifest.json">
 
@@ -15,47 +15,38 @@
     <script src="https://cdn.tailwindcss.com"></script>
     
     <style>
-        /* Base Piano Styling - Scaled slightly smaller for mobile landscape */
-        .white-key { width: 42px; height: 160px; transition: transform 0.05s, background-color 0.05s; }
-        .black-key { width: 28px; height: 100px; margin-left: -14px; transition: transform 0.05s; }
+        /* Base Piano Styling */
+        .white-key { width: 48px; height: 200px; transition: transform 0.05s, background-color 0.05s; }
+        .black-key { width: 32px; height: 120px; margin-left: -16px; transition: transform 0.05s; }
         .key-pressed { transform: translateY(4px) !important; }
-        
-        /* The container ensures the piano stays centered and scrollable if the screen is too small */
-        .piano-scroll-box {
-            width: 100%;
-            overflow-x: auto;
-            display: flex;
-            justify-content: flex-start;
-            padding: 10px 20px;
-            -webkit-overflow-scrolling: touch;
-        }
+        .piano-container { min-width: 768px; } 
 
+        /* Android Specific UI Fixes */
         body { 
-            overscroll-behavior-y: contain;
+            overscroll-behavior-y: contain; /* Prevents pull-to-refresh */
             user-select: none; 
             -webkit-user-select: none; 
+            -webkit-touch-callout: none;
             touch-action: manipulation;
             background-color: #f8fafc;
-            margin: 0;
-            padding: 0;
-            overflow-x: hidden;
         }
 
-        /* Adjust UI for landscape */
-        .ui-panel {
+        /* Smooth scroll for the piano on small screens */
+        .scroll-container {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            width: 100%;
             display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 8px 24px;
-            background: white;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            justify-content: center;
+            padding: 20px;
         }
     </style>
 
     <script>
+        // Service Worker Registration for PWA
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js');
+                navigator.serviceWorker.register('sw.js').catch(err => console.log("SW Export failed", err));
             });
         }
     </script>
@@ -66,6 +57,7 @@
         const { useState, useRef, useEffect } = React;
 
         const PianoScaleGame = () => {
+          const [gameState, setGameState] = useState('playing');
           const [score, setScore] = useState(0);
           const [lives, setLives] = useState(3);
           const [currentStep, setCurrentStep] = useState(0);
@@ -76,6 +68,7 @@
             audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
           }, []);
 
+          // Complete 2 Octaves + final C# (including A#)
           const notes = [
             { note: 'C', freq: 261.63, isBlack: false, oct: 1 }, { note: 'C#', freq: 277.18, isBlack: true, oct: 1 },
             { note: 'D', freq: 293.66, isBlack: false, oct: 1 }, { note: 'D#', freq: 311.13, isBlack: true, oct: 1 },
@@ -105,6 +98,7 @@
             g.gain.setValueAtTime(0.2, ctx.currentTime);
             g.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
             osc.start(); osc.stop(ctx.currentTime + 0.4);
+            if (window.navigator.vibrate) window.navigator.vibrate(20);
           };
 
           const handlePress = (n) => {
@@ -126,55 +120,61 @@
           const blackNotes = notes.filter(n => n.isBlack);
 
           return (
-            <div className="min-h-screen flex flex-col overflow-hidden">
-              <div className="ui-panel">
-                <div className="flex gap-4 items-center">
-                    <span className="text-xs font-bold text-indigo-600">SCORE: {score}</span>
-                    <span className="text-xs text-red-500">{"❤️".repeat(lives)}</span>
+            <div className="min-h-screen flex flex-col items-center py-4 px-2">
+              <div className="w-full max-w-4xl flex justify-between items-center mb-4 bg-white p-4 rounded-2xl shadow-sm border">
+                <div className="flex flex-col">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase">Score</span>
+                  <span className="text-xl font-black text-indigo-600">{score}</span>
                 </div>
                 
-                <div className="flex gap-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold text-slate-500 uppercase">Labels</span>
+                  <button onClick={() => setShowLabels(!showLabels)} className={`w-10 h-5 rounded-full relative ${showLabels ? 'bg-indigo-500' : 'bg-slate-300'}`}>
+                    <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all ${showLabels ? 'left-5' : 'left-0.5'}`} />
+                  </button>
+                </div>
+
+                <div className="flex gap-1">{Array.from({length: 3}).map((_, i) => (<span key={i} className={i < lives ? "" : "grayscale opacity-30"}>❤️</span>))}</div>
+              </div>
+
+              <div className="mb-6 text-center">
+                <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">{currentScale.name}</h2>
+                <div className="flex flex-wrap justify-center gap-1">
                   {currentScale.sequence.map((n, i) => (
-                    <div key={i} className={`w-6 h-6 flex items-center justify-center rounded text-[10px] font-bold ${i === currentStep ? 'bg-yellow-400' : i < currentStep ? 'bg-green-100 text-green-600' : 'bg-slate-100 text-slate-300'}`}>
+                    <div key={i} className={`w-8 h-8 flex items-center justify-center rounded-lg text-xs font-bold ${i === currentStep ? 'bg-yellow-400 ring-2 ring-yellow-200' : i < currentStep ? 'bg-green-100 text-green-600' : 'bg-white text-slate-300 border'}`}>
                       {n}
                     </div>
                   ))}
                 </div>
-
-                <button onClick={() => setShowLabels(!showLabels)} className="text-[10px] font-bold px-2 py-1 bg-slate-200 rounded uppercase">
-                    Labels: {showLabels ? 'ON' : 'OFF'}
-                </button>
               </div>
 
-              <div className="flex-grow flex items-center justify-center">
-                <div className="piano-scroll-box">
-                  <div className="relative inline-block bg-slate-800 p-4 pt-10 rounded-2xl shadow-2xl border-t-8 border-slate-700">
-                    <div className="flex relative bg-slate-300 p-[1px] rounded-sm">
-                      {whiteNotes.map((n, i) => (
-                        <div key={i} onClick={() => handlePress(n)} className="white-key bg-white border-r border-slate-100 active:key-pressed cursor-pointer flex items-end justify-center pb-2 rounded-b shadow-[inset_0_-4px_0_#eee]">
-                          {showLabels && <span className="text-[8px] font-bold text-slate-300">{n.note}{n.oct}</span>}
-                        </div>
-                      ))}
-
-                      <div className="absolute top-0 left-0 w-full h-0 pointer-events-none">
-                        {whiteNotes.map((_, i) => {
-                          const pattern = [0, 1, 3, 4, 5]; 
-                          const isLast = i === whiteNotes.length - 1;
-                          if (pattern.includes(i % 7) || isLast) {
-                            const oct = Math.floor(i / 7) + 1;
-                            let noteName = ['C#','D#','F#','G#','A#'][pattern.indexOf(i % 7)] || 'C#';
-                            const blackNoteObj = blackNotes.find(bn => bn.note === noteName && bn.oct === (isLast ? 3 : oct));
-                            if (!blackNoteObj) return null;
-                            return (
-                              <div key={i} onClick={(e) => { e.stopPropagation(); handlePress(blackNoteObj); }} style={{ left: `${(i + 1) * 42}px` }}
-                                className="black-key absolute top-0 pointer-events-auto bg-slate-900 active:key-pressed rounded-b flex items-end justify-center pb-2 shadow-lg border-x border-slate-950">
-                                {showLabels && <span className="text-[7px] font-bold text-slate-600">{blackNoteObj.note}</span>}
-                              </div>
-                            );
-                          }
-                          return null;
-                        })}
+              <div className="scroll-container">
+                <div className="relative inline-block bg-slate-800 p-6 pt-12 rounded-[30px] shadow-2xl border-t-8 border-slate-700 piano-container">
+                  <div className="flex relative bg-slate-400 p-[1px] rounded-sm">
+                    {whiteNotes.map((n, i) => (
+                      <div key={i} onClick={() => handlePress(n)} className="white-key bg-white border-r border-slate-100 hover:bg-slate-50 active:key-pressed cursor-pointer flex items-end justify-center pb-4 rounded-b-lg shadow-[inset_0_-5px_0_#eee]">
+                        {showLabels && <span className="text-[9px] font-bold text-slate-300 uppercase">{n.note}{n.oct}</span>}
                       </div>
+                    ))}
+
+                    <div className="absolute top-0 left-0 w-full h-0 pointer-events-none">
+                      {whiteNotes.map((_, i) => {
+                        const pattern = [0, 1, 3, 4, 5]; 
+                        const isLast = i === whiteNotes.length - 1;
+                        if (pattern.includes(i % 7) || isLast) {
+                          const oct = Math.floor(i / 7) + 1;
+                          let noteName = ['C#','D#','F#','G#','A#'][pattern.indexOf(i % 7)] || 'C#';
+                          const blackNoteObj = blackNotes.find(bn => bn.note === noteName && bn.oct === (isLast ? 3 : oct));
+                          if (!blackNoteObj) return null;
+                          return (
+                            <div key={i} onClick={(e) => { e.stopPropagation(); handlePress(blackNoteObj); }} style={{ left: `${(i + 1) * 48}px` }}
+                              className="black-key absolute top-0 pointer-events-auto bg-gradient-to-b from-slate-800 to-black active:key-pressed rounded-b-md shadow-lg border-x border-slate-950 flex items-end justify-center pb-3">
+                              {showLabels && <span className="text-[8px] font-bold text-slate-600">{blackNoteObj.note}</span>}
+                            </div>
+                          );
+                        }
+                        return null;
+                      })}
                     </div>
                   </div>
                 </div>
