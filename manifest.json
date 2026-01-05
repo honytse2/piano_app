@@ -1,18 +1,15 @@
 {
   "short_name": "PianoMaster",
   "name": "Piano Scale Master Game",
+  "display": "standalone",
+  "orientation": "landscape",
+  "start_url": "/piano_app/",
+  "scope": "/piano_app/",
   "icons": [
     {
       "src": "https://cdn-icons-png.flaticon.com/512/3048/3048405.png",
       "type": "image/png",
-      "sizes": "512x512",
-      "purpose": "any maskable"
+      "sizes": "512x512"
     }
-  ],
-  "start_url": "/piano_app/",
-  "scope": "/piano_app/",
-  "display": "standalone",
-  "orientation": "portrait",
-  "theme_color": "#4f46e5",
-  "background_color": "#ffffff"
+  ]
 }
